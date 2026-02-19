@@ -48,12 +48,18 @@ Complete step-by-step guide to set up Supabase for your Restaurant E-commerce We
 
 The database connection string is needed for Prisma to connect to your database.
 
+> ⚠️ **CRITICAL**: For Vercel deployment, you **MUST** use port **6543** (Connection Pooler).  
+> 💡 **Good news**: Port 6543 works for **BOTH** local development (`npm run dev`) AND Vercel! Use the same URL everywhere.  
+> See [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) for complete details.
+
 ### Step 1: Go to Database Settings
 1. In your Supabase Dashboard, click on the **gear icon** (Settings) in left sidebar
 2. Click **Database**
 3. Scroll down to **Connection string** section
 
-### Step 2: Copy Connection String
+### Step 2: Choose Connection Type
+
+#### For Local Development (Port 5432 - Direct Connection)
 1. Select **URI** tab
 2. You'll see something like:
    ```
@@ -62,16 +68,57 @@ The database connection string is needed for Prisma to connect to your database.
 3. Click **Copy**
 4. **IMPORTANT**: Replace `[YOUR-PASSWORD]` with your actual database password
 
+#### For Vercel Deployment (Port 6543 - Connection Pooler) ⚠️ REQUIRED
+1. Click **Connect** button (top right of dashboard) OR find "Transaction pooler" section
+2. Copy the connection string with port **6543**:
+   ```
+   postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+   ```
+3. **CRITICAL**: This uses port 6543 and has `.pooler.` in the hostname
+
 ### Step 3: Update Your .env File
-Create/update `my-app/.env`:
+
+#### Option 1: Use Port 6543 for Everything (Recommended) ✅
+
+**Same URL works for BOTH local development AND Vercel:**
+
 ```env
-DATABASE_URL="postgresql://postgres:YOUR_ACTUAL_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-0-YOUR_REGION.pooler.supabase.com:6543/postgres"
 ```
 
 **Example:**
 ```env
+DATABASE_URL="postgresql://postgres.abcdefghijklm:MySecurePassword123!@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+```
+
+**Why this is recommended:**
+- ✅ Works with `npm run dev` (local development)
+- ✅ Works on Vercel (production)
+- ✅ One URL for all environments (simpler)
+- ✅ Consistent behavior everywhere
+
+#### Option 2: Use Different URLs for Different Environments
+
+**Local Development (Port 5432):**
+```env
 DATABASE_URL="postgresql://postgres:MySecurePassword123!@db.abcdefghijklm.supabase.co:5432/postgres"
 ```
+
+**Vercel Deployment (Port 6543 - Required!):**
+```env
+DATABASE_URL="postgresql://postgres.abcdefghijklm:MySecurePassword123!@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+```
+
+**Key differences between ports:**
+| Feature | Port 5432 | Port 6543 |
+|---------|-----------|-----------|
+| Local dev | ✅ Yes | ✅ Yes |
+| Vercel | ❌ No (will fail!) | ✅ Yes (required) |
+| Connection limit | ~60 | Thousands |
+| Offline use | ✅ Yes | ❌ No |
+| Latency | Lower | ~1-2ms higher |
+
+**Recommendation**: Use port 6543 for everything to keep it simple!
 
 ---
 

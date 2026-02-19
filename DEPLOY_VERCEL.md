@@ -27,6 +27,10 @@ Before deploying, make sure you have:
 - ✅ Website working locally (`npm run dev`)
 - ✅ Vercel account (free tier works)
 
+> ⚠️ **CRITICAL**: Make sure your `DATABASE_URL` uses **port 6543** (Connection Pooler), NOT port 5432. Vercel is serverless and requires connection pooling.
+> 
+> 💡 **You can test locally with port 6543!** It works with `npm run dev` so you can use the same URL everywhere. See [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) for details.
+
 ---
 
 ## 2. Prepare Your Project
@@ -217,10 +221,19 @@ After the first build (which will fail due to missing env vars):
 | `SUPABASE_SERVICE_ROLE_KEY` | Your service role key | Production, Preview, Development |
 | `NEXT_PUBLIC_APP_URL` | https://your-domain.vercel.app | Production, Preview, Development |
 
+> ⚠️ **CRITICAL - DATABASE_URL Format for Vercel:**
+> 
+> You MUST use port **6543** (Connection Pooler), NOT port 5432:
+> ```
+> postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+> ```
+> 
+> See [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) for why this is required.
+
 **How to add:**
 1. Click **Add** button
 2. Enter **Name** (e.g., `DATABASE_URL`)
-3. Enter **Value** (paste the connection string)
+3. Enter **Value** (paste the connection string with port 6543)
 4. Check all environments: ☑️ Production ☑️ Preview ☑️ Development
 5. Click **Save**
 6. Repeat for all 5 variables
@@ -249,7 +262,8 @@ Here's the full list of environment variables you need:
 
 ```bash
 # Database (PostgreSQL via Supabase)
-DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres"
+# ⚠️ CRITICAL: Use port 6543 for Vercel (Connection Pooler)
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
 
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL="https://[PROJECT_REF].supabase.co"
@@ -259,6 +273,8 @@ SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIs..."
 # Application URL (your Vercel URL)
 NEXT_PUBLIC_APP_URL="https://[YOUR_PROJECT_NAME].vercel.app"
 ```
+
+> 📖 **Note**: Port 6543 is required for serverless environments like Vercel. See [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) for detailed explanation.
 
 ### Getting Your Vercel URL
 
@@ -328,6 +344,27 @@ After adding custom domain:
 ---
 
 ## 8. Troubleshooting
+
+### 🔴 CRITICAL: Using Port 5432 Instead of 6543
+
+**Problem**: Website works locally but fails on Vercel with connection errors.
+
+**Error Messages**:
+- "Too many connections"
+- "Connection terminated unexpectedly"
+- "Timeout acquiring connection"
+
+**Solution**: **Use port 6543 (Connection Pooler) for Vercel!**
+
+```bash
+# ❌ WRONG - Port 5432 (Direct Connection)
+DATABASE_URL="postgresql://postgres:password@db.project.supabase.co:5432/postgres"
+
+# ✅ CORRECT - Port 6543 (Connection Pooler)
+DATABASE_URL="postgresql://postgres.project:password@aws-0-region.pooler.supabase.com:6543/postgres"
+```
+
+See [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) for complete explanation.
 
 ### Build Failed: "DATABASE_URL is not set"
 **Solution**: Add the environment variable in Vercel Dashboard → Settings → Environment Variables

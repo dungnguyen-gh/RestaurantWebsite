@@ -11,6 +11,7 @@ Complete documentation for your Restaurant E-commerce Website.
 | [QUICKSTART.md](./QUICKSTART.md) | **Start here!** Get running in 15 mins | 🚀 Just starting |
 | [README.md](./README.md) | Full project documentation | 📖 Want complete overview |
 | [SETUP_SUPABASE.md](./SETUP_SUPABASE.md) | Step-by-step Supabase setup | 🗄️ Setting up database |
+| [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) | ⚠️ Critical: Port 6543 vs 5432 for Vercel | 🚨 Deploying to Vercel |
 | [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md) | Deploy to Vercel guide | 🌐 Going live |
 | [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) | Code architecture & structure | 💻 Understanding the code |
 
@@ -32,6 +33,7 @@ Complete documentation for your Restaurant E-commerce Website.
 ### For Troubleshooting
 - Build errors → **DEPLOY_VERCEL.md** (Section 8)
 - Database issues → **SETUP_SUPABASE.md** (Section 6)
+- Vercel database connection errors → **SERVERLESS_DATABASE.md**
 - Code questions → **PROJECT_SUMMARY.md**
 
 ---
@@ -59,6 +61,16 @@ Complete documentation for your Restaurant E-commerce Website.
 - API keys configuration
 - Troubleshooting database issues
 - **Best for**: Database setup
+
+### SERVERLESS_DATABASE.md ⚠️ IMPORTANT
+- Why you need port 6543 for Vercel
+- **Port 6543 works for BOTH local AND Vercel!**
+- Difference between direct (5432) and pooler (6543) connections
+- How to get the correct connection string
+- Connection pooling configuration
+- Troubleshooting serverless database issues
+- **Best for**: Understanding database configuration
+- **CRITICAL**: Read this before deploying to Vercel!
 
 ### DEPLOY_VERCEL.md
 - CLI deployment method
@@ -164,6 +176,8 @@ Use this to track your progress:
 | Problem | Solution | File |
 |---------|----------|------|
 | Can't connect to database | Check connection string format | SETUP_SUPABASE.md |
+| Vercel: "Too many connections" | Use port 6543 (not 5432) | SERVERLESS_DATABASE.md |
+| Vercel: "Connection refused" | Use connection pooler URL | SERVERLESS_DATABASE.md |
 | Build fails on Vercel | Add environment variables | DEPLOY_VERCEL.md |
 | Images won't upload | Check storage bucket policies | SETUP_SUPABASE.md |
 | Admin login not working | Re-seed database | QUICKSTART.md |

@@ -35,6 +35,8 @@ In Supabase Dashboard:
 2. Copy **Connection string** (URI format)
 3. Replace `[YOUR-PASSWORD]` with your actual password
 
+> ⚠️ **FOR VERCEL DEPLOYMENT**: You need a DIFFERENT connection string! See Step 5.
+
 **API Keys:**
 1. Settings → API
 2. Copy `anon public` key
@@ -61,8 +63,8 @@ In Supabase Dashboard:
 Create `my-app/.env`:
 
 ```env
-# Database
-DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres"
+# Database (Use port 6543 - works for both local AND Vercel!)
+DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-0-YOUR_REGION.pooler.supabase.com:6543/postgres"
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
@@ -74,10 +76,15 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
 Replace:
-- `YOUR_PASSWORD` → Your database password
 - `YOUR_PROJECT_REF` → From Supabase URL (e.g., `abcdefghijklm`)
+- `YOUR_PASSWORD` → Your database password
+- `YOUR_REGION` → Your Supabase region (e.g., `us-east-1`)
 - `your-anon-key-here` → From Supabase API settings
 - `your-service-role-key-here` → From Supabase API settings
+
+> 💡 **Tip**: Using port 6543 works for **both** local development AND Vercel deployment! Use the same URL everywhere.
+> 
+> Get the connection string from Supabase Dashboard → **Connect** → **Transaction pooler**
 
 ---
 
@@ -138,6 +145,15 @@ Open browser:
 
 ## Step 5: Deploy to Vercel (10 mins)
 
+> ⚠️ **CRITICAL**: For Vercel, your `DATABASE_URL` must use **port 6543** (Connection Pooler), NOT port 5432!
+> 
+> **Wrong**: `postgresql://...supabase.co:5432/postgres`  
+> **Correct**: `postgresql://...pooler.supabase.com:6543/postgres`
+> 
+> **Good news**: Port 6543 works for **both** local development AND Vercel! You can use the same URL everywhere.
+> 
+> Get this from Supabase Dashboard → Connect → Transaction pooler. See [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) for details.
+
 ### Option A: CLI (Fastest)
 ```bash
 # Install Vercel CLI
@@ -152,6 +168,7 @@ vercel --prod
 
 # Add env vars one by one
 vercel env add DATABASE_URL
+# ⚠️ Use port 6543 connection string here!
 vercel env add NEXT_PUBLIC_SUPABASE_URL
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 vercel env add SUPABASE_SERVICE_ROLE_KEY
