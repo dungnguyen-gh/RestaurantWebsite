@@ -10,7 +10,7 @@ This guide walks you through:
 1. Setting up Supabase (database + storage)
 2. Configuring environment variables
 3. Testing locally
-4. Deploying to Vercel
+4. Deploying to Netlify
 
 **Estimated time**: 15-30 minutes
 
@@ -30,12 +30,11 @@ This guide walks you through:
 ### 1.2 Get Connection Details
 In Supabase Dashboard:
 
-**Database URL:**
+**Database URL (use Connection Pooler - port 6543):**
 1. Settings → Database
-2. Copy **Connection string** (URI format)
-3. Replace `[YOUR-PASSWORD]` with your actual password
-
-> ⚠️ **FOR VERCEL DEPLOYMENT**: You need a DIFFERENT connection string! See Step 5.
+2. Find **Connection pooler** section (NOT the direct connection)
+3. Copy the connection string with port **6543**
+4. Replace `[YOUR-PASSWORD]` with your actual password
 
 **API Keys:**
 1. Settings → API
@@ -63,7 +62,7 @@ In Supabase Dashboard:
 Create `my-app/.env`:
 
 ```env
-# Database (Use port 6543 - works for both local AND Vercel!)
+# Database (Use port 6543)
 DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-0-YOUR_REGION.pooler.supabase.com:6543/postgres"
 
 # Supabase
@@ -78,13 +77,9 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 Replace:
 - `YOUR_PROJECT_REF` → From Supabase URL (e.g., `abcdefghijklm`)
 - `YOUR_PASSWORD` → Your database password
-- `YOUR_REGION` → Your Supabase region (e.g., `us-east-1`)
+- `YOUR_REGION` → Your Supabase region (e.g., `us-east-1`, `ap-southeast-1`)
 - `your-anon-key-here` → From Supabase API settings
 - `your-service-role-key-here` → From Supabase API settings
-
-> 💡 **Tip**: Using port 6543 works for **both** local development AND Vercel deployment! Use the same URL everywhere.
-> 
-> Get the connection string from Supabase Dashboard → **Connect** → **Transaction pooler**
 
 ---
 
@@ -143,76 +138,44 @@ Open browser:
 
 ---
 
-## Step 5: Deploy to Vercel (10 mins)
+## Step 5: Deploy to Netlify (10 mins)
 
-> ⚠️ **CRITICAL**: For Vercel, your `DATABASE_URL` must use **port 6543** (Connection Pooler), NOT port 5432!
-> 
-> **Wrong**: `postgresql://...supabase.co:5432/postgres`  
-> **Correct**: `postgresql://...pooler.supabase.com:6543/postgres`
-> 
-> **Good news**: Port 6543 works for **both** local development AND Vercel! You can use the same URL everywhere.
-> 
-> Get this from Supabase Dashboard → Connect → Transaction pooler. See [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) for details.
+### Push to GitHub
 
-### Option A: CLI (Fastest)
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Login
-vercel login
-
-# Deploy
 cd my-app
-vercel --prod
-
-# Add env vars one by one
-vercel env add DATABASE_URL
-# ⚠️ Use port 6543 connection string here!
-vercel env add NEXT_PUBLIC_SUPABASE_URL
-vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
-vercel env add SUPABASE_SERVICE_ROLE_KEY
-
-# Redeploy
-vercel --prod
-```
-
-### Option B: GitHub + Vercel Dashboard (Recommended)
-```bash
-# Push to GitHub
-cd my-app
-git init
 git add .
 git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/restaurant-website.git
-git push -u origin main
+git push origin main
 ```
 
-1. Go to https://vercel.com/dashboard
-2. Click **Add New Project**
-3. Import your GitHub repo
-4. Framework: Next.js
-5. Build Command: `prisma generate && next build`
-6. Click **Deploy**
-7. Go to Settings → Environment Variables
-8. Add all 4 environment variables
-9. Redeploy
+### Deploy on Netlify
+
+1. Go to https://app.netlify.com/start
+2. Connect GitHub and select your repository
+3. Configure build settings:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `.next`
+4. Click **"Show advanced"** → **"New variable"**
+5. Add all 4 environment variables (same values from your `.env` file)
+6. Click **"Deploy site"**
+
+Wait 3-5 minutes for the build to complete.
 
 ---
 
 ## Step 6: Get Your Public URL
 
-After deployment, Vercel gives you a URL:
+After deployment, Netlify gives you a URL:
 
 ```
-https://restaurant-website-abc123.vercel.app
+https://restaurant-website-abc123.netlify.app
 ```
 
 **Update environment variable:**
-1. In Vercel Dashboard → Settings → Environment Variables
+1. In Netlify Dashboard → Site settings → Environment variables
 2. Add `NEXT_PUBLIC_APP_URL` with your actual URL
-3. Redeploy
+3. Trigger a new deploy (Deploys → Trigger deploy)
 
 ---
 
@@ -220,8 +183,8 @@ https://restaurant-website-abc123.vercel.app
 
 Your restaurant website is now live and accessible worldwide!
 
-**Website**: `https://your-domain.vercel.app`  
-**Admin**: `https://your-domain.vercel.app/admin/login`
+**Website**: `https://your-domain.netlify.app`  
+**Admin**: `https://your-domain.netlify.app/admin/login`
 
 ---
 
@@ -250,15 +213,15 @@ Your restaurant website is now live and accessible worldwide!
 ## Common Issues
 
 ### "DATABASE_URL is not set"
-Add the environment variable in Vercel Dashboard.
+Add the environment variable in Netlify Dashboard → Site settings → Environment variables.
 
 ### "Cannot find module '@prisma/client'"
-Update build command to: `prisma generate && next build`
+The `postinstall` script in `package.json` should handle this. If not, update build command to: `npm run postinstall && npm run build`
 
 ### Images not uploading
 Check Supabase storage bucket is public and policies are set.
 
-### Admin login fails
+### Admin login not working
 Run `npm run seed` again or visit `/api/admin/seed` (POST).
 
 ---
@@ -268,7 +231,7 @@ Run `npm run seed` again or visit `/api/admin/seed` (POST).
 | Issue | See File |
 |-------|----------|
 | Database setup | [SETUP_SUPABASE.md](./SETUP_SUPABASE.md) |
-| Deployment | [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md) |
+| Deployment | [DEPLOY.md](./DEPLOY.md) |
 | Full documentation | [README.md](./README.md) |
 | Project structure | [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) |
 
@@ -280,7 +243,7 @@ Run `npm run seed` again or visit `/api/admin/seed` (POST).
 |------|---------|
 | `README.md` | Full project documentation |
 | `SETUP_SUPABASE.md` | Detailed Supabase setup guide |
-| `DEPLOY_VERCEL.md` | Detailed Vercel deployment guide |
+| `DEPLOY.md` | Detailed Netlify deployment guide |
 | `QUICKSTART.md` | This file - quick reference |
 | `PROJECT_SUMMARY.md` | Code architecture overview |
 

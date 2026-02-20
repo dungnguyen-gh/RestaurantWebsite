@@ -15,7 +15,7 @@ A comprehensive guide to set up this restaurant e-commerce website from scratch.
 7. [Seed the Database](#7-seed-the-database)
 8. [Run the Application](#8-run-the-application)
 9. [Admin Access](#9-admin-access)
-10. [Deploy to Vercel](#10-deploy-to-vercel)
+10. [Deploy to Netlify](#10-deploy-to-netlify)
 
 ---
 
@@ -27,7 +27,7 @@ Before starting, make sure you have:
 - **Git** - [Download here](https://git-scm.com/)
 - **npm** (comes with Node.js) or **yarn**
 - A **Supabase** account (free) - [Sign up](https://supabase.com/)
-- A **Vercel** account (optional, for deployment) - [Sign up](https://vercel.com/)
+- A **Netlify** account (optional, for deployment) - [Sign up](https://www.netlify.com/)
 
 Verify your installations:
 ```bash
@@ -282,33 +282,24 @@ git commit -m "Ready for deployment"
 git push origin main
 ```
 
-### Step 10.2: Connect to Vercel
+### Step 10.2: Deploy to Netlify
 
-1. Go to [https://vercel.com](https://vercel.com) and sign in
-2. Click **"Add New Project"**
-3. Import your GitHub repository: `dungnguyen-gh/RestaurantWebsite`
-4. Configure project:
-   - **Framework Preset:** Next.js
-   - **Root Directory:** `my-app` (if your repo has this structure)
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `.next`
+1. Go to [https://app.netlify.com/start](https://app.netlify.com/start)
+2. Connect GitHub and select your repository: `dungnguyen-gh/RestaurantWebsite`
+3. Configure build settings:
+   - **Build command:** `npm run build`
+   - **Publish directory:** `.next`
+4. Click **"Show advanced"** → **"New variable"**
+5. Add all 4 environment variables from your `.env` file:
+   - `DATABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+6. Click **"Deploy site"**
 
-### Step 10.3: Add Environment Variables
+Wait 3-5 minutes for the build to complete!
 
-In Vercel project settings, add all environment variables from your `.env` file:
-
-```
-DATABASE_URL=
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-```
-
-### Step 10.4: Deploy
-
-Click **"Deploy"** and wait for the build to complete!
-
-Your site will be live at `https://your-project.vercel.app`
+Your site will be live at `https://restaurant-website-xxx.netlify.app`
 
 ---
 
@@ -395,7 +386,7 @@ After setup, you can:
 2. **Add more menu items** - Use the admin dashboard
 3. **Configure payment** - Integrate Stripe or other payment providers
 4. **Add email notifications** - Use SendGrid or Resend
-5. **Set up analytics** - Add Google Analytics or Vercel Analytics
+5. **Set up analytics** - Add Google Analytics
 
 ---
 

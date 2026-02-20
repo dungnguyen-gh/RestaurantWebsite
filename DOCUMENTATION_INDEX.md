@@ -11,8 +11,7 @@ Complete documentation for your Restaurant E-commerce Website.
 | [QUICKSTART.md](./QUICKSTART.md) | **Start here!** Get running in 15 mins | 🚀 Just starting |
 | [README.md](./README.md) | Full project documentation | 📖 Want complete overview |
 | [SETUP_SUPABASE.md](./SETUP_SUPABASE.md) | Step-by-step Supabase setup | 🗄️ Setting up database |
-| [SERVERLESS_DATABASE.md](./SERVERLESS_DATABASE.md) | ⚠️ Critical: Port 6543 vs 5432 for Vercel | 🚨 Deploying to Vercel |
-| [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md) | Deploy to Vercel guide | 🌐 Going live |
+| [DEPLOY.md](./DEPLOY.md) | Deploy to Netlify guide | 🌐 Going live |
 | [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) | Code architecture & structure | 💻 Understanding the code |
 
 ---
@@ -22,18 +21,17 @@ Complete documentation for your Restaurant E-commerce Website.
 ### For Beginners (Just Starting)
 1. **QUICKSTART.md** - Get it running locally
 2. **SETUP_SUPABASE.md** - Set up your database
-3. **DEPLOY_VERCEL.md** - Go live
+3. **DEPLOY.md** - Go live on Netlify
 
 ### For Developers (Want to Customize)
 1. **README.md** - Full feature list
 2. **PROJECT_SUMMARY.md** - Understand the code structure
 3. **SETUP_SUPABASE.md** - Database configuration
-4. **DEPLOY_VERCEL.md** - Production deployment
+4. **DEPLOY.md** - Production deployment
 
 ### For Troubleshooting
-- Build errors → **DEPLOY_VERCEL.md** (Section 8)
-- Database issues → **SETUP_SUPABASE.md** (Section 6)
-- Vercel database connection errors → **SERVERLESS_DATABASE.md**
+- Build errors → **DEPLOY.md**
+- Database issues → **SETUP_SUPABASE.md**
 - Code questions → **PROJECT_SUMMARY.md**
 
 ---
@@ -62,19 +60,9 @@ Complete documentation for your Restaurant E-commerce Website.
 - Troubleshooting database issues
 - **Best for**: Database setup
 
-### SERVERLESS_DATABASE.md ⚠️ IMPORTANT
-- Why you need port 6543 for Vercel
-- **Port 6543 works for BOTH local AND Vercel!**
-- Difference between direct (5432) and pooler (6543) connections
-- How to get the correct connection string
-- Connection pooling configuration
-- Troubleshooting serverless database issues
-- **Best for**: Understanding database configuration
-- **CRITICAL**: Read this before deploying to Vercel!
-
-### DEPLOY_VERCEL.md
-- CLI deployment method
-- GitHub + Vercel Dashboard method
+### DEPLOY.md
+- Netlify deployment via web UI
+- Netlify CLI deployment
 - Environment variables configuration
 - Custom domain setup
 - Production troubleshooting
@@ -104,9 +92,9 @@ npx prisma db push       # Push schema to database
 npx prisma studio        # Open database GUI
 npm run seed             # Seed database with sample data
 
-# Deployment
-vercel --prod            # Deploy to production
-vercel logs --all        # View deployment logs
+# Deployment (Netlify CLI)
+netlify deploy --prod    # Deploy to production
+netlify open            # Open site in browser
 
 # Utilities
 npx shadcn add [component] # Add shadcn UI component
@@ -120,8 +108,8 @@ npx shadcn add [component] # Add shadcn UI component
 |-------------|-----|
 | Local Development | http://localhost:3000 |
 | Admin Panel (Local) | http://localhost:3000/admin/login |
-| Production | https://your-domain.vercel.app |
-| Admin Panel (Production) | https://your-domain.vercel.app/admin/login |
+| Production | https://your-domain.netlify.app |
+| Admin Panel (Production) | https://your-domain.netlify.app/admin/login |
 
 ---
 
@@ -153,8 +141,8 @@ Use this to track your progress:
 ### Phase 2: Production Deployment
 - [ ] Create GitHub repository
 - [ ] Push code to GitHub
-- [ ] Import project to Vercel
-- [ ] Add environment variables in Vercel
+- [ ] Import project to Netlify
+- [ ] Add environment variables in Netlify
 - [ ] Deploy to production
 - [ ] Test live website
 - [ ] Change default admin password
@@ -176,9 +164,7 @@ Use this to track your progress:
 | Problem | Solution | File |
 |---------|----------|------|
 | Can't connect to database | Check connection string format | SETUP_SUPABASE.md |
-| Vercel: "Too many connections" | Use port 6543 (not 5432) | SERVERLESS_DATABASE.md |
-| Vercel: "Connection refused" | Use connection pooler URL | SERVERLESS_DATABASE.md |
-| Build fails on Vercel | Add environment variables | DEPLOY_VERCEL.md |
+| Build fails on Netlify | Check build settings | DEPLOY.md |
 | Images won't upload | Check storage bucket policies | SETUP_SUPABASE.md |
 | Admin login not working | Re-seed database | QUICKSTART.md |
 | Prisma errors | Run `npx prisma generate` | README.md |
@@ -188,7 +174,7 @@ Use this to track your progress:
 - **Next.js Docs**: https://nextjs.org/docs
 - **Supabase Docs**: https://supabase.com/docs
 - **Prisma Docs**: https://www.prisma.io/docs
-- **Vercel Docs**: https://vercel.com/docs
+- **Netlify Docs**: https://docs.netlify.com
 - **Tailwind CSS Docs**: https://tailwindcss.com/docs
 - **shadcn/ui Docs**: https://ui.shadcn.com
 

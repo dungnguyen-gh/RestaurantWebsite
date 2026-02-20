@@ -30,13 +30,14 @@ A full-featured restaurant e-commerce website built with Next.js, Tailwind CSS, 
 - **Database**: [PostgreSQL](https://www.postgresql.org/) via [Supabase](https://supabase.com/)
 - **ORM**: [Prisma](https://www.prisma.io/)
 - **Storage**: [Supabase Storage](https://supabase.com/storage)
-- **Deployment**: [Vercel](https://vercel.com/)
+- **Deployment**: [Netlify](https://www.netlify.com/)
 
 ## Prerequisites
 
 - Node.js 18+ 
 - npm or yarn
 - Supabase account (free tier works)
+- Netlify account (free tier works)
 
 ## Getting Started
 
@@ -54,7 +55,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # Database (PostgreSQL via Supabase)
-DATABASE_URL="postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres"
+DATABASE_URL="postgresql://postgres:[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres"
 
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL="https://[project-ref].supabase.co"
@@ -68,7 +69,7 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ### 3. Set Up Supabase
 
 1. Create a new project on [Supabase](https://supabase.com/)
-2. Get your database connection string from Settings > Database
+2. Get your database connection string from Settings > Database (Connection Pooler with port 6543)
 3. Get your API keys from Settings > API
 4. Create a storage bucket called `restaurant-images` (public)
 
@@ -78,11 +79,11 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 # Generate Prisma client
 npx prisma generate
 
-# Run migrations
-npx prisma migrate dev --name init
+# Push schema to database
+npx prisma db push
 
 # Seed the database with sample data
-npx tsx scripts/seed.ts
+npm run seed
 # Or visit: http://localhost:3000/api/admin/seed (POST request)
 ```
 
@@ -135,20 +136,19 @@ my-app/
 
 ## Deployment
 
-### Deploy to Vercel
+### Deploy to Netlify
 
+See [DEPLOY.md](./DEPLOY.md) for detailed instructions.
+
+**Quick steps:**
 1. Push your code to GitHub
-
-2. Import project on [Vercel](https://vercel.com/)
-
-3. Add environment variables in Vercel dashboard:
-   - `DATABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `NEXT_PUBLIC_APP_URL`
-
-4. Deploy!
+2. Go to https://app.netlify.com/start
+3. Connect GitHub and select your repository
+4. Build settings:
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+5. Add environment variables
+6. Deploy!
 
 ### Manual Deployment
 
@@ -205,6 +205,16 @@ Edit `app/globals.css` to customize the color scheme:
 2. Run `npx prisma migrate dev`
 3. Update `categoryLabels` in `lib/types.ts`
 
+## Documentation
+
+| File | Description |
+|------|-------------|
+| [QUICKSTART.md](./QUICKSTART.md) | Get running in 15 minutes |
+| [DEPLOY.md](./DEPLOY.md) | Deployment guide |
+| [SETUP_SUPABASE.md](./SETUP_SUPABASE.md) | Supabase setup |
+| [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) | Code architecture |
+| [DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md) | All documentation |
+
 ## Troubleshooting
 
 ### Images not loading
@@ -213,7 +223,7 @@ Edit `app/globals.css` to customize the color scheme:
 - Check browser console for CORS errors
 
 ### Database connection errors
-- Verify `DATABASE_URL` format is correct
+- Verify `DATABASE_URL` format is correct (use port 6543)
 - Check that IP is allowed in Supabase settings
 - Ensure database is not in pause mode
 
