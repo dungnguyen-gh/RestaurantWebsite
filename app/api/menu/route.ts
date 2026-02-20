@@ -1,22 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { Category } from "@/lib/types";
+import { serializeMenuItems, serializeMenuItem } from "@/lib/serialization";
+import { createMenuItemSchema, menuQuerySchema } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 // GET all menu items
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get("category") as Category | null;
-    const available = searchParams.get("available");
+    
+    // Validate query params
+    const queryResult = menuQuerySchema.safeParse({
+      category: searchParams.get("category") || undefined,
+      available: searchParams.get("available") || undefined,
+    });
 
-    const where: any = {};
+    const where: Prisma.MenuItemWhereInput = {};
 
-    if (category) {
-      where.category = category;
-    }
-
-    if (available !== null) {
-      where.isAvailable = available === "true";
+    if (queryResult.success) {
+      if (queryResult.data.category) {
+        where.category = queryResult.data.category;
+      }
+      if (queryResult.data.available !== undefined) {
+        where.isAvailable = queryResult.data.available;
+      }
     }
 
     const items = await prisma.menuItem.findMany({
@@ -24,13 +31,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    // Serialize Decimal values to numbers
-    const serializedItems = items.map((item) => ({
-      ...item,
-      price: Number(item.price),
-    }));
-
-    return NextResponse.json(serializedItems);
+    return NextResponse.json(serializeMenuItems(items));
   } catch (error) {
     console.error("Error fetching menu items:", error);
     return NextResponse.json(
@@ -40,37 +41,34 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST new menu item (admin only)
+// POST new menu item (admin only - protected by middleware)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, price, image, category, isAvailable } = body;
-
-    if (!name || !description || !price || !category) {
+    
+    // Validate input
+    const result = createMenuItemSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: result.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, description, price, image, category, isAvailable } = result.data;
 
     const item = await prisma.menuItem.create({
       data: {
         name,
         description,
-        price: parseFloat(price),
+        price,
         image,
         category,
-        isAvailable: isAvailable ?? true,
+        isAvailable,
       },
     });
 
-    // Serialize Decimal values to numbers
-    const serializedItem = {
-      ...item,
-      price: Number(item.price),
-    };
-
-    return NextResponse.json(serializedItem, { status: 201 });
+    return NextResponse.json(serializeMenuItem(item), { status: 201 });
   } catch (error) {
     console.error("Error creating menu item:", error);
     return NextResponse.json(

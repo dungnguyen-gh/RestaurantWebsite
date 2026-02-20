@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/contexts/CartContext";
+import { calculateCartTotals, formatPrice, qualifiesForFreeDelivery, remainingForFreeDelivery } from "@/lib/cart-utils";
 
 export default function CartPage() {
   const { items, removeFromCart, updateQuantity, totalItems, totalPrice, clearCart } = useCart();
+
+  const totals = calculateCartTotals(totalPrice);
 
   if (items.length === 0) {
     return (
@@ -48,6 +51,7 @@ export default function CartPage() {
                       src={item.menuItem.image || "/images/food-placeholder.svg"}
                       alt={item.menuItem.name}
                       fill
+                      sizes="96px"
                       className="object-cover"
                     />
                   </div>
@@ -68,6 +72,7 @@ export default function CartPage() {
                         size="icon"
                         className="text-muted-foreground hover:text-destructive"
                         onClick={() => removeFromCart(item.menuItem.id)}
+                        aria-label={`Remove ${item.menuItem.name} from cart`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -83,6 +88,7 @@ export default function CartPage() {
                           onClick={() =>
                             updateQuantity(item.menuItem.id, item.quantity - 1)
                           }
+                          aria-label="Decrease quantity"
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
@@ -96,6 +102,7 @@ export default function CartPage() {
                           onClick={() =>
                             updateQuantity(item.menuItem.id, item.quantity + 1)
                           }
+                          aria-label="Increase quantity"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -134,15 +141,17 @@ export default function CartPage() {
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Items ({totalItems})</span>
-                  <span>${totalPrice.toFixed(2)}</span>
+                  <span>{formatPrice(totals.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Delivery</span>
-                  <span className="text-green-500">Free</span>
+                  <span className={totals.delivery === 0 ? "text-green-500" : ""}>
+                    {totals.delivery === 0 ? "Free" : formatPrice(totals.delivery)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax</span>
-                  <span>${(totalPrice * 0.1).toFixed(2)}</span>
+                  <span className="text-muted-foreground">Tax (10%)</span>
+                  <span>{formatPrice(totals.tax)}</span>
                 </div>
               </div>
 
@@ -151,7 +160,7 @@ export default function CartPage() {
               <div className="flex justify-between text-xl font-semibold mb-6">
                 <span>Total</span>
                 <span className="text-amber-500">
-                  ${(totalPrice * 1.1).toFixed(2)}
+                  {formatPrice(totals.total)}
                 </span>
               </div>
 
@@ -167,7 +176,9 @@ export default function CartPage() {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
-                Free delivery on orders above $25
+                {qualifiesForFreeDelivery(totalPrice) 
+                  ? "✓ You qualify for free delivery!" 
+                  : `Add ${formatPrice(remainingForFreeDelivery(totalPrice))} more for free delivery`}
               </p>
             </CardContent>
           </Card>

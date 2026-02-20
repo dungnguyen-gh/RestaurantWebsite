@@ -42,7 +42,12 @@ In Supabase Dashboard:
 3. Copy `service_role secret` key
 4. Copy Project URL
 
-**Save these 4 values!**
+**JWT Secret (Generate yourself):**
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+**Save these 5 values!**
 
 ### 1.3 Create Storage Bucket
 1. Storage → New bucket
@@ -52,8 +57,8 @@ In Supabase Dashboard:
 5. Click on bucket → Policies
 6. Add policies:
    - `Allow public read` (SELECT) - roles: anon, authenticated
-   - `Allow authenticated uploads` (INSERT) - roles: authenticated
-   - `Allow authenticated delete` (DELETE) - roles: authenticated
+   - `Allow uploads` (INSERT) - roles: authenticated
+   - `Allow delete` (DELETE) - roles: authenticated
 
 ---
 
@@ -72,14 +77,18 @@ SUPABASE_SERVICE_ROLE_KEY="your-service-role-key-here"
 
 # App
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# JWT Secret (generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+JWT_SECRET="your-generated-secret-minimum-32-characters"
 ```
 
 Replace:
 - `YOUR_PROJECT_REF` → From Supabase URL (e.g., `abcdefghijklm`)
 - `YOUR_PASSWORD` → Your database password
-- `YOUR_REGION` → Your Supabase region (e.g., `us-east-1`, `ap-southeast-1`)
+- `YOUR_REGION` → Your Supabase region (e.g., `us-east-1`)
 - `your-anon-key-here` → From Supabase API settings
 - `your-service-role-key-here` → From Supabase API settings
+- `your-generated-secret` → Run the Node.js command above
 
 ---
 
@@ -97,29 +106,33 @@ npx prisma generate
 # Push schema to database
 npx prisma db push
 
+# Start the dev server (needed for seeding)
+npm run dev
+```
+
+In a new terminal:
+
+```bash
 # Seed with sample data
-npm run seed
+curl -X POST http://localhost:3000/api/admin/seed
 ```
 
 You should see:
-```
-🌱 Starting database seed...
-👤 Creating default admin...
-✅ Admin created:
-   Email: admin@restaurant.com
-   Password: admin123
-🍽️ Creating sample menu items...
-✅ Created 10 menu items
-🎉 Database seed completed successfully!
+```json
+{
+  "message": "Database seeded successfully",
+  "admin": {
+    "email": "admin@restaurant.com",
+    "password": "admin123"
+  }
+}
 ```
 
 ---
 
 ## Step 4: Test Locally (5 mins)
 
-```bash
-npm run dev
-```
+The dev server is already running at `http://localhost:3000`
 
 Open browser:
 - **Website**: http://localhost:3000
@@ -157,14 +170,21 @@ git push origin main
    - **Build command**: `npm run build`
    - **Publish directory**: `.next`
 4. Click **"Show advanced"** → **"New variable"**
-5. Add all 4 environment variables (same values from your `.env` file)
+5. Add all 5 environment variables:
+   - `DATABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `JWT_SECRET` (generate a NEW secret for production)
 6. Click **"Deploy site"**
 
 Wait 3-5 minutes for the build to complete.
 
 ---
 
-## Step 6: Get Your Public URL
+## Step 6: Post-Deployment Setup
+
+### Update Environment Variable
 
 After deployment, Netlify gives you a URL:
 
@@ -176,6 +196,14 @@ https://restaurant-website-abc123.netlify.app
 1. In Netlify Dashboard → Site settings → Environment variables
 2. Add `NEXT_PUBLIC_APP_URL` with your actual URL
 3. Trigger a new deploy (Deploys → Trigger deploy)
+
+### Change Default Password
+
+⚠️ **CRITICAL**: Change the default admin password immediately!
+
+1. Go to Supabase Dashboard → Table Editor → `admins`
+2. Update the password hash or create a new admin user
+3. Delete the default `admin@restaurant.com` user
 
 ---
 
@@ -212,17 +240,26 @@ Your restaurant website is now live and accessible worldwide!
 
 ## Common Issues
 
+### "JWT_SECRET is not set"
+Generate a secret and add it to environment variables:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
 ### "DATABASE_URL is not set"
 Add the environment variable in Netlify Dashboard → Site settings → Environment variables.
 
 ### "Cannot find module '@prisma/client'"
-The `postinstall` script in `package.json` should handle this. If not, update build command to: `npm run postinstall && npm run build`
+The `postinstall` script should handle this. If not, update build command to: `npm run postinstall && npm run build`
 
 ### Images not uploading
 Check Supabase storage bucket is public and policies are set.
 
-### Admin login not working
-Run `npm run seed` again or visit `/api/admin/seed` (POST).
+### Admin login not working after deployment
+- Check browser console for errors
+- Verify `JWT_SECRET` is set in Netlify environment variables
+- Ensure cookies are enabled in browser
+- Check that you're using HTTPS (Netlify provides this)
 
 ---
 
@@ -246,6 +283,7 @@ Run `npm run seed` again or visit `/api/admin/seed` (POST).
 | `DEPLOY.md` | Detailed Netlify deployment guide |
 | `QUICKSTART.md` | This file - quick reference |
 | `PROJECT_SUMMARY.md` | Code architecture overview |
+| `SETUP_GUIDE.md` | Complete step-by-step setup |
 
 ---
 

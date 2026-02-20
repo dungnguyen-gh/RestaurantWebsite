@@ -10,6 +10,7 @@ Complete documentation for your Restaurant E-commerce Website.
 |------|-------------|-----------|
 | [QUICKSTART.md](./QUICKSTART.md) | **Start here!** Get running in 15 mins | 🚀 Just starting |
 | [README.md](./README.md) | Full project documentation | 📖 Want complete overview |
+| [SETUP_GUIDE.md](./SETUP_GUIDE.md) | Complete setup instructions | 🔧 Setting up from scratch |
 | [SETUP_SUPABASE.md](./SETUP_SUPABASE.md) | Step-by-step Supabase setup | 🗄️ Setting up database |
 | [DEPLOY.md](./DEPLOY.md) | Deploy to Netlify guide | 🌐 Going live |
 | [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) | Code architecture & structure | 💻 Understanding the code |
@@ -32,6 +33,7 @@ Complete documentation for your Restaurant E-commerce Website.
 ### For Troubleshooting
 - Build errors → **DEPLOY.md**
 - Database issues → **SETUP_SUPABASE.md**
+- Authentication issues → **PROJECT_SUMMARY.md**
 - Code questions → **PROJECT_SUMMARY.md**
 
 ---
@@ -49,8 +51,17 @@ Complete documentation for your Restaurant E-commerce Website.
 - Tech stack details
 - File structure
 - API documentation
+- Security features
 - Local development guide
 - **Best for**: Comprehensive reference
+
+### SETUP_GUIDE.md
+- Complete step-by-step setup
+- All prerequisites
+- Detailed environment configuration
+- Database setup
+- Security checklist
+- **Best for**: Thorough setup understanding
 
 ### SETUP_SUPABASE.md
 - Create Supabase project
@@ -64,16 +75,19 @@ Complete documentation for your Restaurant E-commerce Website.
 - Netlify deployment via web UI
 - Netlify CLI deployment
 - Environment variables configuration
-- Custom domain setup
+- Post-deployment checklist
+- Security hardening
 - Production troubleshooting
 - **Best for**: Going live
 
 ### PROJECT_SUMMARY.md
 - Project structure diagram
 - Feature implementation status
-- Database schema
+- Database schema with indexes
+- Authentication flow
 - Component list
 - API routes reference
+- Security features
 - **Best for**: Understanding the codebase
 
 ---
@@ -85,12 +99,18 @@ Complete documentation for your Restaurant E-commerce Website.
 npm run dev              # Start development server
 npm run build            # Build for production
 npm start                # Start production server
+npm run lint             # Run ESLint
 
 # Database
 npx prisma generate      # Generate Prisma client
 npx prisma db push       # Push schema to database
 npx prisma studio        # Open database GUI
+npx prisma migrate dev   # Create and apply migration
 npm run seed             # Seed database with sample data
+
+# Security
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+                         # Generate JWT secret
 
 # Deployment (Netlify CLI)
 netlify deploy --prod    # Deploy to production
@@ -123,6 +143,31 @@ npx shadcn add [component] # Add shadcn UI component
 
 ---
 
+## 🔒 Security Overview
+
+### Authentication
+- JWT-based authentication with HTTP-only cookies
+- Secure, SameSite=strict cookie attributes
+- 24-hour token expiration
+- Middleware-based route protection
+
+### Input Validation
+- Zod schemas for all API inputs
+- Type-safe validation with TypeScript
+- File upload type and size restrictions
+
+### Database Security
+- Prisma ORM prevents SQL injection
+- Row Level Security (RLS) ready in Supabase
+- Database indexes for performance
+
+### Deployment Security
+- HTTPS enforced by Netlify
+- Environment variables securely stored
+- No sensitive data in client bundles
+
+---
+
 ## 📋 Setup Checklist
 
 Use this to track your progress:
@@ -133,6 +178,7 @@ Use this to track your progress:
 - [ ] Run `npm install`
 - [ ] Create Supabase project
 - [ ] Set up `.env` file
+- [ ] Generate JWT_SECRET
 - [ ] Run `npx prisma db push`
 - [ ] Run `npm run seed`
 - [ ] Run `npm run dev`
@@ -141,17 +187,26 @@ Use this to track your progress:
 ### Phase 2: Production Deployment
 - [ ] Create GitHub repository
 - [ ] Push code to GitHub
+- [ ] Generate new JWT_SECRET for production
 - [ ] Import project to Netlify
-- [ ] Add environment variables in Netlify
+- [ ] Add all 5 environment variables in Netlify
 - [ ] Deploy to production
 - [ ] Test live website
-- [ ] Change default admin password
+- [ ] Update NEXT_PUBLIC_APP_URL
 
-### Phase 3: Content & Launch
+### Phase 3: Security Hardening
+- [ ] Change default admin password
+- [ ] Delete or disable default admin account
+- [ ] Review Supabase storage bucket policies
+- [ ] Enable additional Netlify security headers (optional)
+- [ ] Configure CORS in Supabase (if needed)
+
+### Phase 4: Content & Launch
 - [ ] Upload real food images
 - [ ] Update restaurant information
 - [ ] Update contact details
 - [ ] Test order placement
+- [ ] Test contact form
 - [ ] Add custom domain (optional)
 - [ ] Share website with customers!
 
@@ -166,7 +221,8 @@ Use this to track your progress:
 | Can't connect to database | Check connection string format | SETUP_SUPABASE.md |
 | Build fails on Netlify | Check build settings | DEPLOY.md |
 | Images won't upload | Check storage bucket policies | SETUP_SUPABASE.md |
-| Admin login not working | Re-seed database | QUICKSTART.md |
+| Admin login not working | Check JWT_SECRET env var | PROJECT_SUMMARY.md |
+| Auth not working after deploy | Check cookies and HTTPS | DEPLOY.md |
 | Prisma errors | Run `npx prisma generate` | README.md |
 
 ### External Resources
@@ -177,6 +233,8 @@ Use this to track your progress:
 - **Netlify Docs**: https://docs.netlify.com
 - **Tailwind CSS Docs**: https://tailwindcss.com/docs
 - **shadcn/ui Docs**: https://ui.shadcn.com
+- **Zod Docs**: https://zod.dev
+- **jose (JWT)**: https://github.com/panva/jose
 
 ---
 
@@ -196,12 +254,18 @@ Edit `app/globals.css`:
 1. Update `Category` enum in `prisma/schema.prisma`
 2. Run `npx prisma migrate dev`
 3. Update `categoryLabels` in `lib/types.ts`
+4. Update `categoryColors` in `components/MenuCard.tsx`
 
 ### Change Restaurant Name
 1. Edit `app/layout.tsx` - metadata title
 2. Edit `app/page.tsx` - hero section
 3. Edit `components/Navbar.tsx` - logo text
 4. Edit `components/Footer.tsx` - brand name
+
+### Customize Authentication
+- Change JWT expiration: Edit `JWT_EXPIRES_IN` in `lib/auth.ts`
+- Modify cookie settings: Edit cookie options in `api/admin/login/route.ts`
+- Add more admin roles: Extend JWT payload in `lib/auth.ts`
 
 ---
 
@@ -216,15 +280,21 @@ my-app/
 │   ├── checkout/page.tsx  # Checkout form
 │   ├── contact/page.tsx   # Contact page
 │   ├── menu/page.tsx      # Menu browsing
+│   ├── error.tsx          # Error boundary
+│   ├── loading.tsx        # Loading UI
 │   ├── page.tsx           # Homepage
 │   └── layout.tsx         # Root layout
 ├── components/            # React components
 ├── contexts/             # State management
 ├── lib/                  # Utilities & database
-├── prisma/               # Database schema
-├── scripts/              # Seed script
-├── *.md                  # Documentation files
-└── package.json          # Dependencies
+│   ├── auth.ts          # JWT utilities
+│   ├── validation.ts    # Zod schemas
+│   └── cart-utils.ts    # Cart calculations
+├── middleware.ts        # Auth middleware
+├── prisma/              # Database schema
+├── public/              # Static assets
+├── *.md                 # Documentation files
+└── package.json         # Dependencies
 ```
 
 ---

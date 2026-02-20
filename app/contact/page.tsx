@@ -23,12 +23,26 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-    setIsSuccess(true);
-    setIsSubmitting(false);
-    toast.success("Message sent successfully!");
+      if (response.ok) {
+        setIsSuccess(true);
+        toast.success("Message sent successfully!");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to send message");
+      }
+    } catch (error) {
+      console.error("Contact form error:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -126,6 +140,7 @@ export default function ContactPage() {
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                   className="grayscale-[30%]"
+                  title="Restaurant Location"
                 />
               </div>
             </CardContent>
@@ -161,6 +176,8 @@ export default function ContactPage() {
                           }
                           placeholder="John Doe"
                           required
+                          maxLength={100}
+                          autoComplete="name"
                         />
                       </div>
                       <div className="space-y-2">
@@ -174,6 +191,8 @@ export default function ContactPage() {
                           }
                           placeholder="john@example.com"
                           required
+                          maxLength={100}
+                          autoComplete="email"
                         />
                       </div>
                     </div>
@@ -188,6 +207,7 @@ export default function ContactPage() {
                         }
                         placeholder="How can we help?"
                         required
+                        maxLength={200}
                       />
                     </div>
 
@@ -202,6 +222,7 @@ export default function ContactPage() {
                         placeholder="Tell us more about your inquiry..."
                         rows={5}
                         required
+                        maxLength={2000}
                       />
                     </div>
 

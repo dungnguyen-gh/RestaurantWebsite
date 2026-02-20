@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
+import { calculateCartTotals, formatPrice } from "@/lib/cart-utils";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function CheckoutPage() {
     address: "",
     notes: "",
   });
+
+  const totals = calculateCartTotals(totalPrice);
 
   if (items.length === 0 && !isSuccess) {
     return (
@@ -72,6 +75,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Phone validation - basic format check
+    const phoneRegex = /^[\d\s\-\+\(\)]{5,20}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -85,7 +95,7 @@ export default function CheckoutPage() {
             quantity: item.quantity,
             price: item.menuItem.price,
           })),
-          total: totalPrice * 1.1, // Including tax
+          total: totals.total,
         }),
       });
 
@@ -95,9 +105,10 @@ export default function CheckoutPage() {
         toast.success("Order placed successfully!");
       } else {
         const error = await response.json();
-        toast.error(error.message || "Failed to place order");
+        toast.error(error.error || error.message || "Failed to place order");
       }
     } catch (error) {
+      console.error("Checkout error:", error);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -135,6 +146,8 @@ export default function CheckoutPage() {
                     }
                     placeholder="John Doe"
                     required
+                    maxLength={100}
+                    autoComplete="name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -150,6 +163,8 @@ export default function CheckoutPage() {
                     }
                     placeholder="+1 (555) 123-4567"
                     required
+                    maxLength={20}
+                    autoComplete="tel"
                   />
                 </div>
               </div>
@@ -173,6 +188,8 @@ export default function CheckoutPage() {
                   placeholder="Enter your full delivery address..."
                   rows={3}
                   required
+                  maxLength={500}
+                  autoComplete="street-address"
                 />
               </div>
             </CardContent>
@@ -192,6 +209,7 @@ export default function CheckoutPage() {
                   }
                   placeholder="Any special requests, allergies, or delivery instructions..."
                   rows={3}
+                  maxLength={1000}
                 />
               </div>
             </CardContent>
@@ -204,22 +222,24 @@ export default function CheckoutPage() {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${totalPrice.toFixed(2)}</span>
+                  <span>{formatPrice(totals.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Delivery</span>
-                  <span className="text-green-500">Free</span>
+                  <span className={totals.delivery === 0 ? "text-green-500" : ""}>
+                    {totals.delivery === 0 ? "Free" : formatPrice(totals.delivery)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax (10%)</span>
-                  <span>${(totalPrice * 0.1).toFixed(2)}</span>
+                  <span>{formatPrice(totals.tax)}</span>
                 </div>
               </div>
               <Separator />
               <div className="flex justify-between text-xl font-semibold mt-4">
                 <span>Total</span>
                 <span className="text-amber-500">
-                  ${(totalPrice * 1.1).toFixed(2)}
+                  {formatPrice(totals.total)}
                 </span>
               </div>
             </CardContent>
@@ -238,7 +258,7 @@ export default function CheckoutPage() {
                 Placing Order...
               </>
             ) : (
-              <>Place Order (${(totalPrice * 1.1).toFixed(2)})</>
+              <>Place Order ({formatPrice(totals.total)})</>
             )}
           </Button>
         </form>

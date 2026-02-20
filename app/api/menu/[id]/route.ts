@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { serializeMenuItem } from "@/lib/serialization";
+import { updateMenuItemSchema } from "@/lib/validation";
 
 // GET single menu item
 export async function GET(
@@ -8,6 +10,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json(
+        { error: "Invalid menu item ID" },
+        { status: 400 }
+      );
+    }
+
     const item = await prisma.menuItem.findUnique({
       where: { id },
     });
@@ -19,13 +31,7 @@ export async function GET(
       );
     }
 
-    // Serialize Decimal values to numbers
-    const serializedItem = {
-      ...item,
-      price: Number(item.price),
-    };
-
-    return NextResponse.json(serializedItem);
+    return NextResponse.json(serializeMenuItem(item));
   } catch (error) {
     console.error("Error fetching menu item:", error);
     return NextResponse.json(
@@ -35,7 +41,7 @@ export async function GET(
   }
 }
 
-// PUT update menu item
+// PUT update menu item (admin only - protected by middleware)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -43,7 +49,24 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, image, category, isAvailable } = body;
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json(
+        { error: "Invalid menu item ID" },
+        { status: 400 }
+      );
+    }
+
+    // Validate input
+    const result = updateMenuItemSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: result.error.flatten() },
+        { status: 400 }
+      );
+    }
 
     const existingItem = await prisma.menuItem.findUnique({
       where: { id },
@@ -56,25 +79,20 @@ export async function PUT(
       );
     }
 
+    const data: Record<string, unknown> = {};
+    if (result.data.name !== undefined) data.name = result.data.name;
+    if (result.data.description !== undefined) data.description = result.data.description;
+    if (result.data.price !== undefined) data.price = result.data.price;
+    if (result.data.image !== undefined) data.image = result.data.image;
+    if (result.data.category !== undefined) data.category = result.data.category;
+    if (result.data.isAvailable !== undefined) data.isAvailable = result.data.isAvailable;
+
     const item = await prisma.menuItem.update({
       where: { id },
-      data: {
-        name: name ?? existingItem.name,
-        description: description ?? existingItem.description,
-        price: price ? parseFloat(price) : existingItem.price,
-        image: image !== undefined ? image : existingItem.image,
-        category: category ?? existingItem.category,
-        isAvailable: isAvailable !== undefined ? isAvailable : existingItem.isAvailable,
-      },
+      data,
     });
 
-    // Serialize Decimal values to numbers
-    const serializedItem = {
-      ...item,
-      price: Number(item.price),
-    };
-
-    return NextResponse.json(serializedItem);
+    return NextResponse.json(serializeMenuItem(item));
   } catch (error) {
     console.error("Error updating menu item:", error);
     return NextResponse.json(
@@ -84,13 +102,23 @@ export async function PUT(
   }
 }
 
-// DELETE menu item
+// DELETE menu item (admin only - protected by middleware)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json(
+        { error: "Invalid menu item ID" },
+        { status: 400 }
+      );
+    }
+
     const existingItem = await prisma.menuItem.findUnique({
       where: { id },
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -53,16 +53,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { MenuItem, Order, Category, OrderStatus, categoryLabels, orderStatusLabels, orderStatusColors } from "@/lib/types";
 import { toast } from "sonner";
+import { useAuth, useRequireAuth } from "@/contexts/AuthContext";
 
 const categories: Category[] = ["APPETIZER", "MAIN_COURSE", "DESSERT", "BEVERAGE", "SPECIAL"];
 const orderStatuses: OrderStatus[] = ["PENDING", "CONFIRMED", "PREPARING", "READY", "DELIVERED", "CANCELLED"];
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { logout } = useAuth();
+  
+  // Auth protection - redirects to login if not authenticated
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth("/admin/login");
+  
   const [activeTab, setActiveTab] = useState("menu");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Menu form state
@@ -77,44 +84,61 @@ export default function AdminDashboardPage() {
     isAvailable: true,
   });
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   // Order view state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
 
+  // Cleanup image preview URL on unmount or when image changes
   useEffect(() => {
-    fetchData();
-  }, []);
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const [menuRes, ordersRes] = await Promise.all([
         fetch("/api/menu"),
         fetch("/api/orders"),
       ]);
 
-      if (menuRes.ok) {
-        const menuData = await menuRes.json();
-        setMenuItems(menuData);
+      if (!menuRes.ok) {
+        throw new Error("Failed to fetch menu items");
+      }
+      if (!ordersRes.ok) {
+        throw new Error("Failed to fetch orders");
       }
 
-      if (ordersRes.ok) {
-        const ordersData = await ordersRes.json();
-        setOrders(ordersData);
-      }
+      const menuData = await menuRes.json();
+      const ordersData = await ordersRes.json();
+      
+      setMenuItems(menuData);
+      setOrders(ordersData);
     } catch (error) {
+      console.error("Error fetching data:", error);
+      setError(error instanceof Error ? error.message : "Failed to fetch data");
       toast.error("Failed to fetch data");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleLogout = () => {
-    // In production, clear the session/token
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, fetchData]);
+
+  const handleLogout = async () => {
+    await logout();
     router.push("/admin/login");
-    toast.success("Logged out successfully");
   };
 
   // Menu CRUD operations
@@ -129,6 +153,10 @@ export default function AdminDashboardPage() {
     });
     setEditingItem(null);
     setUploadedImage(null);
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+      setImagePreviewUrl(null);
+    }
   };
 
   const openAddMenuDialog = () => {
@@ -149,6 +177,20 @@ export default function AdminDashboardPage() {
     setIsMenuDialogOpen(true);
   };
 
+  const handleImageChange = (file: File | null) => {
+    // Cleanup previous preview URL
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+    
+    setUploadedImage(file);
+    if (file) {
+      setImagePreviewUrl(URL.createObjectURL(file));
+    } else {
+      setImagePreviewUrl(null);
+    }
+  };
+
   const handleImageUpload = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
@@ -156,10 +198,12 @@ export default function AdminDashboardPage() {
     const response = await fetch("/api/upload", {
       method: "POST",
       body: formData,
+      credentials: "include",
     });
 
     if (!response.ok) {
-      throw new Error("Failed to upload image");
+      const error = await response.json();
+      throw new Error(error.error || "Failed to upload image");
     }
 
     const data = await response.json();
@@ -180,7 +224,7 @@ export default function AdminDashboardPage() {
       const payload = {
         ...menuForm,
         price: parseFloat(menuForm.price),
-        image: imageUrl,
+        image: imageUrl || null,
       };
 
       const url = editingItem ? `/api/menu/${editingItem.id}` : "/api/menu";
@@ -189,6 +233,7 @@ export default function AdminDashboardPage() {
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -202,7 +247,8 @@ export default function AdminDashboardPage() {
         toast.error(error.error || "Failed to save item");
       }
     } catch (error) {
-      toast.error("Failed to save item");
+      console.error("Error saving menu item:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save item");
     } finally {
       setIsUploading(false);
     }
@@ -214,15 +260,18 @@ export default function AdminDashboardPage() {
     try {
       const response = await fetch(`/api/menu/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (response.ok) {
         toast.success("Item deleted successfully");
         fetchData();
       } else {
-        toast.error("Failed to delete item");
+        const error = await response.json();
+        toast.error(error.error || "Failed to delete item");
       }
     } catch (error) {
+      console.error("Error deleting menu item:", error);
       toast.error("Failed to delete item");
     }
   };
@@ -233,6 +282,7 @@ export default function AdminDashboardPage() {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status }),
       });
 
@@ -243,9 +293,11 @@ export default function AdminDashboardPage() {
           setSelectedOrder({ ...selectedOrder, status });
         }
       } else {
-        toast.error("Failed to update order status");
+        const error = await response.json();
+        toast.error(error.error || "Failed to update order status");
       }
     } catch (error) {
+      console.error("Error updating order status:", error);
       toast.error("Failed to update order status");
     }
   };
@@ -256,6 +308,7 @@ export default function AdminDashboardPage() {
     try {
       const response = await fetch(`/api/orders/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -263,9 +316,11 @@ export default function AdminDashboardPage() {
         fetchData();
         setIsOrderDialogOpen(false);
       } else {
-        toast.error("Failed to delete order");
+        const error = await response.json();
+        toast.error(error.error || "Failed to delete order");
       }
     } catch (error) {
+      console.error("Error deleting order:", error);
       toast.error("Failed to delete order");
     }
   };
@@ -288,6 +343,20 @@ export default function AdminDashboardPage() {
     pendingOrders: orders.filter((o) => o.status === "PENDING").length,
     totalRevenue: orders.reduce((sum, o) => sum + Number(o.total), 0),
   };
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -314,6 +383,17 @@ export default function AdminDashboardPage() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Error State */}
+        {error && (
+          <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
+            <p className="font-medium">Error loading data</p>
+            <p className="text-sm">{error}</p>
+            <Button onClick={fetchData} variant="outline" className="mt-2">
+              Retry
+            </Button>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card>
@@ -420,7 +500,7 @@ export default function AdminDashboardPage() {
                     ) : filteredMenuItems.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No items found
+                          {searchQuery ? "No items found matching your search" : "No items found"}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -463,6 +543,7 @@ export default function AdminDashboardPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => openEditMenuDialog(item)}
+                              aria-label={`Edit ${item.name}`}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -470,6 +551,7 @@ export default function AdminDashboardPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDeleteMenuItem(item.id)}
+                              aria-label={`Delete ${item.name}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -508,7 +590,7 @@ export default function AdminDashboardPage() {
                     ) : filteredOrders.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No orders found
+                          {searchQuery ? "No orders found matching your search" : "No orders found"}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -544,6 +626,7 @@ export default function AdminDashboardPage() {
                                 setSelectedOrder(order);
                                 setIsOrderDialogOpen(true);
                               }}
+                              aria-label={`View order ${order.id.slice(0, 8)}`}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -560,7 +643,10 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Menu Item Dialog */}
-      <Dialog open={isMenuDialogOpen} onOpenChange={setIsMenuDialogOpen}>
+      <Dialog open={isMenuDialogOpen} onOpenChange={(open) => {
+        if (!open) resetMenuForm();
+        setIsMenuDialogOpen(open);
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -583,6 +669,7 @@ export default function AdminDashboardPage() {
                   setMenuForm({ ...menuForm, name: e.target.value })
                 }
                 required
+                maxLength={100}
               />
             </div>
 
@@ -595,6 +682,8 @@ export default function AdminDashboardPage() {
                   setMenuForm({ ...menuForm, description: e.target.value })
                 }
                 required
+                maxLength={500}
+                rows={3}
               />
             </div>
 
@@ -605,6 +694,8 @@ export default function AdminDashboardPage() {
                   id="price"
                   type="number"
                   step="0.01"
+                  min="0"
+                  max="10000"
                   value={menuForm.price}
                   onChange={(e) =>
                     setMenuForm({ ...menuForm, price: e.target.value })
@@ -640,28 +731,26 @@ export default function AdminDashboardPage() {
               <Input
                 id="image"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setUploadedImage(file);
-                  }
+                  const file = e.target.files?.[0] || null;
+                  handleImageChange(file);
                 }}
               />
               {menuForm.image && !uploadedImage && (
                 <div className="relative h-32 w-full rounded-lg overflow-hidden mt-2">
                   <Image
                     src={menuForm.image}
-                    alt="Preview"
+                    alt="Current image"
                     fill
                     className="object-cover"
                   />
                 </div>
               )}
-              {uploadedImage && (
+              {imagePreviewUrl && (
                 <div className="relative h-32 w-full rounded-lg overflow-hidden mt-2">
                   <Image
-                    src={URL.createObjectURL(uploadedImage)}
+                    src={imagePreviewUrl}
                     alt="Preview"
                     fill
                     className="object-cover"
@@ -689,7 +778,10 @@ export default function AdminDashboardPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsMenuDialogOpen(false)}
+                onClick={() => {
+                  setIsMenuDialogOpen(false);
+                  resetMenuForm();
+                }}
               >
                 Cancel
               </Button>

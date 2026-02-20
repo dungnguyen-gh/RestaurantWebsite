@@ -1,6 +1,6 @@
 # Savory & Sage - Restaurant E-commerce Website
 
-A full-featured restaurant e-commerce website built with Next.js, Tailwind CSS, and Prisma with PostgreSQL (via Supabase).
+A full-featured restaurant e-commerce website built with Next.js, Tailwind CSS, Prisma with PostgreSQL (via Supabase), and secure JWT authentication.
 
 ![Restaurant Website](https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&h=400&fit=crop)
 
@@ -8,27 +8,38 @@ A full-featured restaurant e-commerce website built with Next.js, Tailwind CSS, 
 
 ### Public Features
 - 🏠 **Home Page** - Hero section, restaurant intro, featured dishes
-- 📋 **Menu Page** - Browse food items by category
-- 🛒 **Cart System** - Add/remove items, update quantities
-- 💳 **Checkout** - Customer details form with order placement
-- 📞 **Contact Page** - Contact form with Google Maps integration
+- 📋 **Menu Page** - Browse food items by category with loading skeletons
+- 🛒 **Cart System** - Add/remove items, update quantities, persistent storage
+- 💳 **Checkout** - Customer details form with validation and order placement
+- 📞 **Contact Page** - Working contact form with Google Maps integration
 - 📱 **Responsive Design** - Mobile-first approach
 - 🎨 **Modern UI** - Dark theme with warm restaurant colors
 
 ### Admin Features
-- 🔐 **Admin Login** - Secure authentication
-- 📊 **Dashboard** - Statistics and overview
-- 🍽️ **Menu Management** - Add, edit, delete menu items
-- 📤 **Image Upload** - Upload food images to cloud storage
+- 🔐 **Secure Admin Login** - JWT authentication with HTTP-only cookies
+- 📊 **Dashboard** - Statistics and overview with error handling
+- 🍽️ **Menu Management** - Add, edit, delete menu items with image upload
 - 📦 **Order Management** - View and manage customer orders
+- 🔒 **Protected Routes** - Middleware-based authentication
+
+### Security Features
+- 🔑 **JWT Authentication** - Secure, stateless authentication
+- 🍪 **HTTP-only Cookies** - XSS-resistant token storage
+- ✅ **Input Validation** - Zod schemas for all inputs
+- 🔒 **Password Hashing** - bcrypt with salt rounds
+- 🛡️ **CSRF Protection** - SameSite cookie attributes
+- 🔍 **Type Safety** - Full TypeScript coverage
 
 ## Tech Stack
 
 - **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 - **Database**: [PostgreSQL](https://www.postgresql.org/) via [Supabase](https://supabase.com/)
 - **ORM**: [Prisma](https://www.prisma.io/)
+- **Authentication**: [jose](https://github.com/panva/jose) (JWT library)
+- **Validation**: [Zod](https://zod.dev/)
 - **Storage**: [Supabase Storage](https://supabase.com/storage)
 - **Deployment**: [Netlify](https://www.netlify.com/)
 
@@ -39,7 +50,7 @@ A full-featured restaurant e-commerce website built with Next.js, Tailwind CSS, 
 - Supabase account (free tier works)
 - Netlify account (free tier works)
 
-## Getting Started
+## Quick Start
 
 ### 1. Clone and Install
 
@@ -55,7 +66,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # Database (PostgreSQL via Supabase)
-DATABASE_URL="postgresql://postgres:[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres"
+DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres"
 
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL="https://[project-ref].supabase.co"
@@ -64,7 +75,12 @@ SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 
 # Next.js
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Security (Required)
+JWT_SECRET="your-super-secret-jwt-key-minimum-32-characters-long"
 ```
+
+> ⚠️ **Important**: Generate a strong `JWT_SECRET` (at least 32 characters) for production!
 
 ### 3. Set Up Supabase
 
@@ -84,7 +100,7 @@ npx prisma db push
 
 # Seed the database with sample data
 npm run seed
-# Or visit: http://localhost:3000/api/admin/seed (POST request)
+# Or visit: http://localhost:3000/api/admin/seed (POST request with auth)
 ```
 
 ### 5. Run Development Server
@@ -103,6 +119,10 @@ my-app/
 │   ├── (routes)/          # Page routes
 │   ├── api/               # API routes
 │   ├── admin/             # Admin pages
+│   ├── error.tsx          # Error boundary
+│   ├── global-error.tsx   # Global error handler
+│   ├── not-found.tsx      # 404 page
+│   ├── loading.tsx        # Loading UI
 │   ├── menu/              # Menu page
 │   ├── cart/              # Cart page
 │   ├── checkout/          # Checkout page
@@ -117,38 +137,90 @@ my-app/
 │   ├── MenuCard.tsx
 │   └── CartSheet.tsx
 ├── contexts/             # React contexts
-│   ├── AuthContext.tsx
-│   └── CartContext.tsx
+│   ├── AuthContext.tsx   # JWT authentication
+│   └── CartContext.tsx   # Shopping cart
 ├── lib/                  # Utility functions
+│   ├── auth.ts          # JWT utilities
+│   ├── cart-utils.ts    # Cart calculations
 │   ├── db.ts            # Prisma client
+│   ├── serialization.ts # Data serialization
 │   ├── supabase.ts      # Supabase client
 │   ├── types.ts         # TypeScript types
-│   └── utils.ts         # Helper functions
+│   ├── utils.ts         # Helper functions
+│   └── validation.ts    # Zod schemas
+├── middleware.ts        # Auth middleware
 ├── prisma/              # Database schema
 │   └── schema.prisma
 ├── public/              # Static assets
 ├── .env                 # Environment variables
 ├── next.config.ts
 ├── package.json
-├── tailwind.config.ts
-└── tsconfig.json
+└── *.md                 # Documentation files
 ```
+
+## API Routes
+
+| Route | Method | Auth | Description |
+|-------|--------|------|-------------|
+| `/api/menu` | GET | No | Get all menu items |
+| `/api/menu` | POST | Yes | Create new menu item |
+| `/api/menu/[id]` | GET | No | Get single menu item |
+| `/api/menu/[id]` | PUT | Yes | Update menu item |
+| `/api/menu/[id]` | DELETE | Yes | Delete menu item |
+| `/api/orders` | GET | No | Get all orders |
+| `/api/orders` | POST | No | Create new order |
+| `/api/orders/[id]` | GET | No | Get single order |
+| `/api/orders/[id]` | PUT | Yes | Update order status |
+| `/api/orders/[id]` | DELETE | Yes | Delete order |
+| `/api/admin/login` | POST | No | Admin login (sets JWT cookie) |
+| `/api/admin/logout` | POST | No | Admin logout |
+| `/api/admin/me` | GET | No | Check auth status |
+| `/api/admin/seed` | POST | Yes | Seed database |
+| `/api/upload` | POST | Yes | Upload image |
+| `/api/contact` | POST | No | Submit contact form |
+
+## Authentication
+
+The application uses JWT-based authentication with HTTP-only cookies:
+
+1. **Login**: Admin credentials are verified with bcrypt
+2. **JWT Creation**: A signed JWT is created with 24h expiration
+3. **Cookie Storage**: Token stored in HTTP-only, Secure, SameSite=strict cookie
+4. **Middleware Check**: Protected routes verify JWT via middleware
+5. **API Protection**: Mutations require valid JWT in cookie
+
+### Protected Resources
+- `/admin/dashboard` - Requires valid JWT
+- POST/PUT/DELETE `/api/menu/*` - Requires valid JWT
+- POST/PUT/DELETE `/api/orders/*` - Requires valid JWT
+- POST `/api/upload` - Requires valid JWT
+
+## Default Credentials
+
+- **Email**: admin@restaurant.com
+- **Password**: admin123
+
+> ⚠️ **Change the default password after first login in production!**
 
 ## Deployment
 
 ### Deploy to Netlify
 
-See [DEPLOY.md](./DEPLOY.md) for detailed instructions.
-
-**Quick steps:**
 1. Push your code to GitHub
 2. Go to https://app.netlify.com/start
 3. Connect GitHub and select your repository
 4. Build settings:
    - Build command: `npm run build`
    - Publish directory: `.next`
-5. Add environment variables
+5. Add environment variables (including `JWT_SECRET`)
 6. Deploy!
+
+**Required Environment Variables:**
+- `DATABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `JWT_SECRET` (generate a strong random string)
 
 ### Manual Deployment
 
@@ -160,41 +232,16 @@ npm run build
 npm start
 ```
 
-## Default Credentials
-
-- **Email**: admin@restaurant.com
-- **Password**: admin123
-
-> ⚠️ Change the default password after first login in production!
-
-## API Routes
-
-| Route | Method | Description |
-|-------|--------|-------------|
-| `/api/menu` | GET | Get all menu items |
-| `/api/menu` | POST | Create new menu item |
-| `/api/menu/[id]` | GET | Get single menu item |
-| `/api/menu/[id]` | PUT | Update menu item |
-| `/api/menu/[id]` | DELETE | Delete menu item |
-| `/api/orders` | GET | Get all orders |
-| `/api/orders` | POST | Create new order |
-| `/api/orders/[id]` | GET | Get single order |
-| `/api/orders/[id]` | PUT | Update order status |
-| `/api/orders/[id]` | DELETE | Delete order |
-| `/api/admin/login` | POST | Admin login |
-| `/api/admin/seed` | POST | Seed database |
-| `/api/upload` | POST | Upload image |
-
 ## Customization
 
 ### Change Colors
 
-Edit `app/globals.css` to customize the color scheme:
+Edit `app/globals.css`:
 
 ```css
-:root {
-  --background: 0 0% 100%;
-  --foreground: 20 14.3% 4.1%;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
   /* ... more variables */
 }
 ```
@@ -204,6 +251,7 @@ Edit `app/globals.css` to customize the color scheme:
 1. Update `Category` enum in `prisma/schema.prisma`
 2. Run `npx prisma migrate dev`
 3. Update `categoryLabels` in `lib/types.ts`
+4. Update `categoryColors` in `components/MenuCard.tsx`
 
 ## Documentation
 
@@ -214,6 +262,7 @@ Edit `app/globals.css` to customize the color scheme:
 | [SETUP_SUPABASE.md](./SETUP_SUPABASE.md) | Supabase setup |
 | [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) | Code architecture |
 | [DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md) | All documentation |
+| [SETUP_GUIDE.md](./SETUP_GUIDE.md) | Complete setup guide |
 
 ## Troubleshooting
 
@@ -229,7 +278,14 @@ Edit `app/globals.css` to customize the color scheme:
 
 ### Build errors
 - Run `npx prisma generate` before building
-- Clear `.next` folder and try again
+- Ensure all environment variables are set
+- Check for TypeScript errors: `npx tsc --noEmit`
+
+### Authentication issues
+- Verify `JWT_SECRET` is set (minimum 32 characters)
+- Check cookies are being set in browser DevTools
+- Ensure `credentials: "include"` is used in fetch requests
+- Check middleware matcher in `middleware.ts`
 
 ## License
 

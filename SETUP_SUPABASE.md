@@ -174,15 +174,41 @@ Or set it to `*` to allow all origins (less secure but easier for development).
 
 ---
 
-## 6. Test Connection
+## 6. Generate JWT Secret
+
+For secure authentication, you need to generate a JWT signing secret:
+
+### Generate Secret
+```bash
+# Using Node.js (run this in terminal)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+This will output a random string like:
+```
+a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456
+```
+
+### Add to Environment Variables
+```env
+JWT_SECRET="your-generated-secret-from-above"
+```
+
+**⚠️ Important:** 
+- Minimum 32 characters required
+- Keep this secret secure
+- Generate a different secret for production
+
+## 7. Test Connection
 
 ### Step 1: Update Environment Variables
-Make sure your `my-app/.env` file has:
+Make sure your `my-app/.env` file has all 5 variables:
 ```env
 DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-0-YOUR_REGION.pooler.supabase.com:6543/postgres"
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+JWT_SECRET="your-generated-secret"
 ```
 
 ### Step 2: Generate Prisma Client
@@ -254,6 +280,7 @@ DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:[PASSWORD]@aws-0-[REGION].p
 | Connection String | Settings → Database → Connection pooler |
 | Anon Key | Settings → API → Project API keys |
 | Service Role Key | Settings → API → Project API keys |
+| JWT Secret | Generate yourself: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
 ---
 

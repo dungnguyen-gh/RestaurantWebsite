@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { serializeOrders, serializeOrder } from "@/lib/serialization";
+import { createOrderSchema, orderQuerySchema } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
-// GET all orders
+// GET all orders (admin only for all, could extend for user-specific)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
+    
+    // Validate query params
+    const queryResult = orderQuerySchema.safeParse({
+      status: searchParams.get("status") || undefined,
+    });
 
-    const where: any = {};
+    const where: Prisma.OrderWhereInput = {};
 
-    if (status) {
-      where.status = status;
+    if (queryResult.success && queryResult.data.status) {
+      where.status = queryResult.data.status;
     }
 
     const orders = await prisma.order.findMany({
@@ -25,21 +32,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    // Serialize Decimal values to numbers
-    const serializedOrders = orders.map((order) => ({
-      ...order,
-      total: Number(order.total),
-      items: order.items.map((item) => ({
-        ...item,
-        price: Number(item.price),
-        menuItem: {
-          ...item.menuItem,
-          price: Number(item.menuItem.price),
-        },
-      })),
-    }));
-
-    return NextResponse.json(serializedOrders);
+    return NextResponse.json(serializeOrders(orders));
   } catch (error) {
     console.error("Error fetching orders:", error);
     return NextResponse.json(
@@ -53,11 +46,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerName, phone, address, notes, items, total } = body;
-
-    if (!customerName || !phone || !address || !items || items.length === 0) {
+    
+    // Validate input
+    const result = createOrderSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: result.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { customerName, phone, address, notes, items, total } = result.data;
+
+    // Verify all menu items exist and are available
+    const menuItemIds = items.map((item) => item.menuItemId);
+    const menuItems = await prisma.menuItem.findMany({
+      where: {
+        id: { in: menuItemIds },
+        isAvailable: true,
+      },
+    });
+
+    if (menuItems.length !== menuItemIds.length) {
+      return NextResponse.json(
+        { error: "One or more items are not available" },
         { status: 400 }
       );
     }
@@ -69,12 +81,12 @@ export async function POST(request: NextRequest) {
         phone,
         address,
         notes,
-        total: parseFloat(total),
+        total,
         items: {
-          create: items.map((item: any) => ({
+          create: items.map((item) => ({
             menuItemId: item.menuItemId,
             quantity: item.quantity,
-            price: parseFloat(item.price),
+            price: item.price,
           })),
         },
       },
@@ -87,21 +99,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Serialize Decimal values to numbers
-    const serializedOrder = {
-      ...order,
-      total: Number(order.total),
-      items: order.items.map((item) => ({
-        ...item,
-        price: Number(item.price),
-        menuItem: {
-          ...item.menuItem,
-          price: Number(item.menuItem.price),
-        },
-      })),
-    };
-
-    return NextResponse.json(serializedOrder, { status: 201 });
+    return NextResponse.json(serializeOrder(order), { status: 201 });
   } catch (error) {
     console.error("Error creating order:", error);
     return NextResponse.json(

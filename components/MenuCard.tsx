@@ -7,23 +7,42 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
-import { useState } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 
 interface MenuCardProps {
   item: SerializableMenuItem;
 }
 
-export function MenuCard({ item }: MenuCardProps) {
+function MenuCardComponent({ item }: MenuCardProps) {
   const { addToCart, items } = useCart();
   const [isAdded, setIsAdded] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isInCart = items.some((cartItem) => cartItem.menuItem.id === item.id);
 
-  const handleAddToCart = () => {
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleAddToCart = useCallback(() => {
     addToCart(item);
     setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 1000);
-  };
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // Set new timeout
+    timeoutRef.current = setTimeout(() => {
+      setIsAdded(false);
+    }, 1000);
+  }, [addToCart, item]);
 
   const categoryColors: Record<string, string> = {
     APPETIZER: "bg-blue-500/10 text-blue-500",
@@ -41,6 +60,7 @@ export function MenuCard({ item }: MenuCardProps) {
           src={item.image || "/images/food-placeholder.svg"}
           alt={item.name}
           fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -63,7 +83,7 @@ export function MenuCard({ item }: MenuCardProps) {
 
       {/* Content */}
       <CardContent className="p-4">
-        <h3 className="font-semibold text-lg mb-2 group-hover:text-amber-500 transition-colors">
+        <h3 className="font-semibold text-lg mb-2 group-hover:text-amber-500 transition-colors line-clamp-1">
           {item.name}
         </h3>
         <p className="text-muted-foreground text-sm line-clamp-2 mb-4">
@@ -74,6 +94,7 @@ export function MenuCard({ item }: MenuCardProps) {
           onClick={handleAddToCart}
           className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
           disabled={isAdded}
+          aria-label={isInCart ? "Add more to cart" : "Add to cart"}
         >
           {isAdded ? (
             <>
@@ -96,3 +117,7 @@ export function MenuCard({ item }: MenuCardProps) {
     </Card>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export const MenuCard = memo(MenuCardComponent);
+MenuCard.displayName = "MenuCard";

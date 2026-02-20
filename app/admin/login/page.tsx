@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,40 +10,53 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      router.push("/admin/dashboard");
+    }
+  }, [isAuthenticated, authLoading, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const response = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+    const result = await login(formData.email, formData.password);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success("Login successful!");
-        router.push("/admin/dashboard");
-      } else {
-        toast.error(data.error || "Invalid credentials");
-      }
-    } catch (error) {
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setIsLoading(false);
+    if (result.success) {
+      toast.success("Login successful!");
+      router.push("/admin/dashboard");
+    } else {
+      toast.error(result.error || "Invalid credentials");
     }
+
+    setIsLoading(false);
   };
+
+  // Show loading while checking auth status
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
+  // Don't show login form if already authenticated (will redirect)
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
@@ -80,6 +93,7 @@ export default function AdminLoginPage() {
                     }
                     className="pl-10"
                     required
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -98,6 +112,7 @@ export default function AdminLoginPage() {
                     }
                     className="pl-10"
                     required
+                    autoComplete="current-password"
                   />
                 </div>
               </div>

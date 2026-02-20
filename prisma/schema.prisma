@@ -18,21 +18,27 @@ model MenuItem {
   updatedAt   DateTime @updatedAt
   orderItems  OrderItem[]
 
+  @@index([category])
+  @@index([isAvailable])
+  @@index([createdAt])
   @@map("menu_items")
 }
 
 model Order {
-  id          String      @id @default(uuid())
+  id           String      @id @default(uuid())
   customerName String
-  phone       String
-  address     String
-  notes       String?
-  total       Decimal     @db.Decimal(10, 2)
-  status      OrderStatus @default(PENDING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  items       OrderItem[]
+  phone        String
+  address      String
+  notes        String?
+  total        Decimal     @db.Decimal(10, 2)
+  status       OrderStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        OrderItem[]
 
+  @@index([status])
+  @@index([createdAt])
+  @@index([phone])
   @@map("orders")
 }
 
@@ -45,6 +51,8 @@ model OrderItem {
   order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
 
+  @@index([orderId])
+  @@index([menuItemId])
   @@map("order_items")
 }
 
@@ -56,6 +64,7 @@ model Admin {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([email])
   @@map("admins")
 }
 

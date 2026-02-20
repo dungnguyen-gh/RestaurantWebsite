@@ -67,6 +67,8 @@ This will install:
 - Supabase client
 - Tailwind CSS
 - shadcn/ui components
+- jose (JWT library)
+- Zod (validation)
 - And other dependencies
 
 ---
@@ -90,15 +92,32 @@ Add the following variables (you'll get the actual values in the next steps):
 
 ```env
 # Database (from Supabase - Step 5)
-DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
+DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-0-YOUR_REGION.pooler.supabase.com:6543/postgres"
 
 # Supabase (from Supabase Dashboard - Step 5)
-NEXT_PUBLIC_SUPABASE_URL="https://[PROJECT_REF].supabase.co"
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="[YOUR_ANON_KEY]"
 SUPABASE_SERVICE_ROLE_KEY="[YOUR_SERVICE_ROLE_KEY]"
+
+# App
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# JWT Secret (generate a strong random string)
+JWT_SECRET="your-super-secret-jwt-key-minimum-32-characters"
 ```
 
 **⚠️ IMPORTANT:** Never commit the `.env` file to git! It's already in `.gitignore`.
+
+### Generate a JWT Secret
+
+For production, generate a secure random string:
+
+```bash
+# Using Node.js
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+# Or use any random string generator (minimum 32 characters)
+```
 
 ---
 
@@ -209,14 +228,15 @@ This opens a web interface at `http://localhost:5555` where you can view/edit da
 
 Add sample menu items and admin user:
 
-### Option 1: Using the API endpoint
+### Option 1: Start server first, then seed via API
 
 ```bash
-# Start the dev server first (in another terminal)
+# Terminal 1: Start the dev server
 npm run dev
 
-# Then seed using curl or a tool like Postman
-curl -X POST http://localhost:3000/api/admin/seed
+# Terminal 2: Seed using curl (after server is ready)
+curl -X POST http://localhost:3000/api/admin/seed \
+  -H "Content-Type: application/json"
 ```
 
 ### Option 2: Using the seed script
@@ -251,8 +271,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Menu | `/menu` | Full menu with categories |
 | Cart | `/cart` | Shopping cart |
 | Checkout | `/checkout` | Place orders |
-| Contact | `/contact` | Contact form |
-| Admin Login | `/admin/login` | Admin authentication |
+| Contact | `/contact` | Contact form with map |
+| Admin Login | `/admin/login` | Secure admin authentication |
 | Admin Dashboard | `/admin/dashboard` | Manage menu & orders |
 
 ---
@@ -269,9 +289,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - View and manage orders
    - Update order status
 
+### How Authentication Works
+
+- After login, a secure HTTP-only cookie is set with a JWT token
+- The token expires after 24 hours
+- Protected routes check for valid token via middleware
+- API mutations require the token to be present
+
 ---
 
-## 10. Deploy to Vercel
+## 10. Deploy to Netlify
 
 ### Step 10.1: Prepare for Deployment
 
@@ -285,16 +312,17 @@ git push origin main
 ### Step 10.2: Deploy to Netlify
 
 1. Go to [https://app.netlify.com/start](https://app.netlify.com/start)
-2. Connect GitHub and select your repository: `dungnguyen-gh/RestaurantWebsite`
+2. Connect GitHub and select your repository
 3. Configure build settings:
    - **Build command:** `npm run build`
    - **Publish directory:** `.next`
 4. Click **"Show advanced"** → **"New variable"**
-5. Add all 4 environment variables from your `.env` file:
+5. Add all 5 environment variables from your `.env` file:
    - `DATABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
+   - `JWT_SECRET` (generate new secret for production)
 6. Click **"Deploy site"**
 
 Wait 3-5 minutes for the build to complete!
@@ -310,15 +338,19 @@ Your site will be live at `https://restaurant-website-xxx.netlify.app`
 - Make sure password is correct
 - Verify you're using the connection pooler (port 6543)
 
+### Error: "JWT_SECRET is not set"
+- Add `JWT_SECRET` to your environment variables
+- Generate a secure random string (minimum 32 characters)
+
 ### Error: "Bucket not found" when uploading images
 - Check bucket name is exactly `restaurant-images`
 - Verify bucket is public
 - Check bucket policies are set correctly
 
-### Error: "Failed to update menu item"
-- Check browser console for more details
-- Verify Supabase keys are correct
-- Make sure `SUPABASE_SERVICE_ROLE_KEY` is set (not just the anon key)
+### Error: "Authentication required" on API calls
+- Check that you're logged in as admin
+- Verify cookies are enabled in browser
+- Check that `credentials: "include"` is set in fetch requests
 
 ### Images not showing
 - Check browser console for 404 errors
@@ -347,6 +379,8 @@ my-app/
 │   ├── checkout/          # Checkout page
 │   ├── contact/           # Contact page
 │   ├── menu/              # Menu page
+│   ├── error.tsx          # Error boundary
+│   ├── loading.tsx        # Loading UI
 │   ├── globals.css        # Global styles
 │   ├── layout.tsx         # Root layout
 │   └── page.tsx           # Home page
@@ -357,13 +391,18 @@ my-app/
 │   ├── Navbar.tsx
 │   └── Footer.tsx
 ├── contexts/             # React contexts
-│   ├── AuthContext.tsx
-│   └── CartContext.tsx
+│   ├── AuthContext.tsx   # JWT authentication
+│   └── CartContext.tsx   # Shopping cart
 ├── lib/                  # Utilities
+│   ├── auth.ts          # JWT utilities
+│   ├── cart-utils.ts    # Cart calculations
 │   ├── db.ts            # Prisma client
+│   ├── serialization.ts # Data serialization
 │   ├── supabase.ts      # Supabase client
 │   ├── types.ts         # TypeScript types
-│   └── utils.ts         # Helper functions
+│   ├── utils.ts         # Helper functions
+│   └── validation.ts    # Zod validation schemas
+├── middleware.ts        # Auth middleware
 ├── prisma/
 │   └── schema.prisma    # Database schema
 ├── public/              # Static files
@@ -390,6 +429,20 @@ After setup, you can:
 
 ---
 
+## Security Checklist
+
+Before going live:
+
+- [ ] Change default admin password
+- [ ] Generate a strong JWT_SECRET for production
+- [ ] Enable Row Level Security (RLS) in Supabase if needed
+- [ ] Set up proper CORS policies
+- [ ] Configure rate limiting for API routes
+- [ ] Enable HTTPS (Netlify provides this by default)
+- [ ] Review and tighten storage bucket policies
+
+---
+
 ## Support
 
 - **Next.js Docs:** https://nextjs.org/docs
@@ -397,6 +450,7 @@ After setup, you can:
 - **Supabase Docs:** https://supabase.com/docs
 - **Tailwind CSS:** https://tailwindcss.com/docs
 - **shadcn/ui:** https://ui.shadcn.com
+- **Zod:** https://zod.dev
 
 ---
 
