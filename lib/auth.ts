@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT, jwtVerify, JWTPayload as JoseJWTPayload } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-change-in-production"
@@ -6,13 +6,13 @@ const JWT_SECRET = new TextEncoder().encode(
 
 const JWT_EXPIRES_IN = "24h";
 
-export interface JWTPayload {
+export interface JWTPayload extends JoseJWTPayload {
   id: string;
   email: string;
   name: string;
 }
 
-export async function createJWT(payload: JWTPayload): Promise<string> {
+export async function createJWT(payload: Omit<JWTPayload, keyof JoseJWTPayload>): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -23,7 +23,7 @@ export async function createJWT(payload: JWTPayload): Promise<string> {
 export async function verifyJWT(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as JWTPayload;
+    return payload as unknown as JWTPayload;
   } catch {
     return null;
   }

@@ -8,17 +8,17 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Create Prisma client with PostgreSQL adapter
-const createPrismaClient = () => {
+const createPrismaClient = (): PrismaClient => {
   if (!process.env.DATABASE_URL) {
     console.warn("DATABASE_URL not set");
-    // Return a mock client for build time
+    // Return a mock client for build time - cast through unknown to bypass type checking
     return new PrismaClient({
       datasources: {
         db: {
           url: "postgresql://placeholder:placeholder@localhost:5432/placeholder",
         },
       },
-    });
+    } as unknown as { adapter: never });
   }
 
   try {

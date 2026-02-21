@@ -1,10 +1,10 @@
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-const sampleMenuItems = [
+const sampleMenuItems: Prisma.MenuItemCreateInput[] = [
   {
     name: "Truffle Mushroom Soup",
     description: "Creamy wild mushroom soup with truffle oil and fresh herbs",

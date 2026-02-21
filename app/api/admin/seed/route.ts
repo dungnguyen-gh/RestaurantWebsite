@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { verifyJWT, getTokenFromCookie } from "@/lib/auth";
 
-const sampleMenuItems = [
+const sampleMenuItems: Prisma.MenuItemCreateInput[] = [
   {
     name: "Truffle Mushroom Soup",
     description: "Creamy wild mushroom soup with truffle oil and fresh herbs",
